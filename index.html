@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Smart PDPC</title>
+    <style>
+        :root { --primary: #2c3e50; --secondary: #34495e; --accent: #3498db; --light: #ecf0f1; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: var(--light); display: flex; flex-direction: column; min-height: 100vh; }
+        .header-banner { background: var(--primary); color: white; padding: 30px 20px; text-align: center; border-bottom: 5px solid var(--accent); position: relative; }
+        #login-area { padding: 30px; text-align: center; background: #fff; margin: 40px auto; width: 85%; max-width: 400px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .tab-container { display: none; padding: 20px; max-width: 100%; margin: auto; flex: 1; }
+        .tab-buttons { display: flex; background: var(--secondary); justify-content: center; flex-wrap: wrap; }
+        .tab-buttons button { padding: 18px 25px; border: none; background: none; color: white; cursor: pointer; font-weight: bold; font-size: 16px; flex-grow: 1; }
+        .tab-buttons button.active { background: var(--accent); border-bottom: 4px solid #fff; }
+        .aspek-card { background: white; padding: 20px; margin-bottom: 15px; border-radius: 8px; border-left: 8px solid var(--accent); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .input-row { display: flex; gap: 10px; align-items: center; }
+        input[type="text"], input[type="number"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
+        .total-box { background: #e74c3c; color: white; padding: 25px; font-size: 28px; text-align: center; margin-top: 25px; border-radius: 8px; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; background: white; font-size: 16px; margin-top: 10px; }
+        th, td { padding: 12px; border: 1px solid #ddd; text-align: center; }
+        .logout-btn { position: absolute; right: 15px; top: 15px; background: #c0392b; color: white; border: none; padding: 10px 18px; cursor: pointer; border-radius: 4px; display: none; font-weight: bold; }
+        
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
+        .perlu-bimbingan { color: red; font-weight: bold; animation: blink 1s linear infinite; }
+        
+        .full-screen-chart { width: 100%; height: 65vh; background: white; padding: 50px; border-radius: 8px; position: relative; border-bottom: 3px solid #333; border-left: 3px solid #333; box-sizing: border-box; display: flex; align-items: flex-end; justify-content: space-around; }
+        .bar { background: var(--accent); width: 8%; position: relative; transition: height 0.5s; }
+        .bar-label { position: absolute; bottom: -45px; width: 200%; left: -50%; text-align: center; font-size: 10px; font-weight: bold; transform: rotate(15deg); }
+        .bar-val { position: absolute; top: -25px; width: 100%; text-align: center; font-weight: bold; font-size: 12px; }
+        
+        .line-svg { width: 100%; height: 100%; position: absolute; top: 0; left: 0; pointer-events: none; }
+        .pie-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-top: 20px; }
+        .legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: bold; }
+        .legend-color { width: 15px; height: 15px; border-radius: 3px; }
+
+        .btn-edit { background: #f1c40f; color: black; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin-right: 5px; }
+        .btn-delete { background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; }
+
+        footer { text-align: center; padding: 20px; background: var(--primary); color: white; font-size: 14px; margin-top: auto; }
+    </style>
+</head>
+<body>
+
+<div class="header-banner">
+    <h1>DASHBOARD SMART PDPC</h1>
+    <button id="logout-btn" class="logout-btn" onclick="logout()">LOG OUT</button>
+</div>
+
+<div id="login-area">
+    <h3>Log Masuk Admin</h3>
+    <input type="password" id="pass" placeholder="Masukkan Kataluan">
+    <br><br>
+    <button onclick="checkLogin()" style="padding: 12px 40px; background: var(--accent); color: white; border: none; border-radius: 5px; cursor: pointer;">Masuk</button>
+</div>
+
+<div id="main-app" style="display:none;">
+    <div class="tab-buttons">
+        <button onclick="openTab('bigdata', this)" class="active">BIG DATA</button>
+        <button onclick="openTab('analisa', this)">ANALISA %</button>
+        <button onclick="openTab('graf', this)">GRAF / HISTOGRAM</button>
+    </div>
+
+    <div id="bigdata" class="tab-container" style="display:block;">
+        <div id="aspek-list"></div>
+        <div class="total-box">JUMLAH KESELURUHAN ASPEK: <span id="total-overall">0</span>/100%</div>
+        <div class="arkib-section" style="margin-top:20px;">
+            <h3>📂 SENARAI GURU</h3>
+            <div id="guru-names-list" style="display: flex; flex-wrap: wrap; gap: 10px;"></div>
+            <div id="guru-detail-area" style="margin-top: 20px; display: none; padding: 15px; background: #fff; border: 1px solid #ddd; border-radius: 5px;">
+                <button onclick="this.parentElement.style.display='none'" style="float:right">Tutup</button>
+                <div id="detail-content"></div>
+            </div>
+        </div>
+        <div style="text-align:center; margin-top:30px;">
+            <button onclick="saveData()" style="padding:15px 50px; background:green; color:white; border:none; border-radius:8px; cursor:pointer; font-size:18px; font-weight:bold;">SIMPAN & KIRA DATA</button>
+        </div>
+    </div>
+
+    <div id="analisa" class="tab-container">
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr style="background:var(--secondary); color:white;">
+                        <th>ASPEK</th>
+                        <th>Wajaran (%)</th>
+                        <th>Skor Akhir (%)</th>
+                        <th>Tindakan</th>
+                    </tr>
+                </thead>
+                <tbody id="analisa-table"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="graf" class="tab-container">
+        <div style="margin-bottom: 20px; text-align: center;">
+            <select id="grafType" onchange="drawGraf()" style="padding: 10px; font-size: 16px; border-radius: 5px;">
+                <option value="bar">Graf Bar</option>
+                <option value="line">Graf Garisan</option>
+                <option value="pie">Carta Pai</option>
+            </select>
+        </div>
+        <div id="chart-display" class="full-screen-chart"></div>
+        <div id="chart-legend" class="pie-legend"></div>
+        <div style="text-align: center; font-weight: bold; margin-top: 50px;">ASPEK</div>
+    </div>
+</div>
+
+<footer>
+    Powered By Ts. AKBAR @2026 Hak Cipta Terpelihara
+</footer>
+
+<script>
+    let masterArkib = [];
+    const aspekData = [
+        { id: "4.1", nama: "PERANCANG", wajaran: 10 },
+        { id: "4.2.1", nama: "PENGAWAL (PROSES)", wajaran: 10 },
+        { id: "4.2.2", nama: "PENGAWAL (SUASANA)", wajaran: 5 },
+        { id: "4.3", nama: "PEMBIMBING", wajaran: 15 },
+        { id: "4.4.1", nama: "PENDORONG (MINDA)", wajaran: 25 },
+        { id: "4.4.2", nama: "PENDORONG (EMOSI)", wajaran: 5 },
+        { id: "4.5", nama: "PENILAI", wajaran: 10 },
+        { id: "4.6", nama: "MURID AKTIF", wajaran: 20 }
+    ];
+
+    function checkLogin() {
+        const p = document.getElementById('pass').value;
+        if(p === "710328065438" || p === "gb123") {
+            document.getElementById('login-area').style.display = 'none';
+            document.getElementById('main-app').style.display = 'block';
+            document.getElementById('logout-btn').style.display = 'block';
+            initAspek();
+        } else alert("Kataluan Salah!");
+    }
+
+    function initAspek() {
+        const container = document.getElementById('aspek-list');
+        container.innerHTML = "";
+        aspekData.forEach(a => {
+            const isFirst = a.id === "4.1";
+            container.innerHTML += `<div class="aspek-card">
+                <strong>ASPEK ${a.id}: ${a.nama} (${a.wajaran}%)</strong>
+                <div class="input-row"><input type="text" id="guru-${a.id}" placeholder="Nama Guru" ${!isFirst?'readonly style="background:#eee"':''}>
+                <input type="number" id="skor-${a.id}" placeholder="Skor N (0-${a.wajaran})"></div></div>`;
+        });
+        document.getElementById('guru-4.1').addEventListener('input', (e) => {
+            aspekData.slice(1).forEach(a => document.getElementById(`guru-${a.id}`).value = e.target.value);
+        });
+    }
+
+    function saveData() {
+        const name = document.getElementById('guru-4.1').value.trim();
+        if(!name) return alert("Sila masukkan nama guru!");
+        
+        const timestamp = Date.now();
+        aspekData.forEach(a => {
+            let s = parseFloat(document.getElementById(`skor-${a.id}`).value) || 0;
+            masterArkib.push({ id: timestamp, nama: name, aspekId: a.id, skor: s, wMax: a.wajaran });
+            document.getElementById(`skor-${a.id}`).value = "";
+        });
+        document.getElementById('guru-4.1').value = "";
+        aspekData.slice(1).forEach(a => document.getElementById(`guru-${a.id}`).value = "");
+        updateDisplay();
+    }
+
+    function updateDisplay() {
+        const nameList = document.getElementById('guru-names-list');
+        const uniqueEntries = masterArkib.filter((v,i,a)=>a.findIndex(t=>(t.id === v.id))===i);
+        nameList.innerHTML = "";
+        uniqueEntries.forEach(entry => {
+            nameList.innerHTML += `<div style="display:flex; align-items:center; background:white; border:1px solid #ccc; border-radius:5px; padding:5px;">
+                <span onclick="showDetail(${entry.id})" style="padding:5px 10px; cursor:pointer; flex-grow:1;">${entry.nama}</span>
+                <button class="btn-edit" onclick="editRecord(${entry.id})">Edit</button>
+                <button class="btn-delete" onclick="deleteRecord(${entry.id})">Padam</button>
+            </div>`;
+        });
+
+        let grand = 0;
+        const analTable = document.getElementById('analisa-table');
+        analTable.innerHTML = "";
+        
+        aspekData.forEach(a => {
+            const items = masterArkib.filter(m => m.aspekId === a.id);
+            const F = items.length;
+            const ΣN = items.reduce((s, i) => s + i.skor, 0);
+            const hasil = F > 0 ? (ΣN / (a.wajaran * F)) * a.wajaran : 0;
+            grand += hasil;
+            a.final = hasil;
+
+            let status = "", style = "";
+            const p = (hasil / a.wajaran) * 10;
+            if(p >= 9) status = "CEMERLANG";
+            else if(p >= 7) status = "BAIK";
+            else if(p >= 5) status = "SEDERHANA";
+            else { status = "PERLU BIMBINGAN SEGERA"; style = "class='perlu-bimbingan'"; }
+
+            analTable.innerHTML += `<tr><td>${a.nama}</td><td>${a.wajaran}%</td><td>${hasil.toFixed(2)}%</td><td ${style}>${status}</td></tr>`;
+        });
+        document.getElementById('total-overall').innerText = grand.toFixed(2);
+    }
+
+    function showDetail(id) {
+        const area = document.getElementById('guru-detail-area');
+        area.style.display = 'block';
+        const records = masterArkib.filter(m => m.id === id);
+        let h = `<h4>Rekod: ${records[0].nama}</h4><ul>`;
+        records.forEach(m => {
+            h += `<li>ASPEK ${m.aspekId}: ${m.skor} / ${m.wMax}</li>`;
+        });
+        document.getElementById('detail-content').innerHTML = h + "</ul>";
+    }
+
+    function editRecord(id) {
+        const records = masterArkib.filter(m => m.id === id);
+        const newName = prompt("Kemaskini Nama Guru:", records[0].nama);
+        if (newName === null) return;
+
+        records.forEach(r => {
+            r.nama = newName;
+            const newSkor = prompt(`Kemaskini Skor untuk ASPEK ${r.aspekId} (Maks: ${r.wMax}):`, r.skor);
+            if (newSkor !== null) r.skor = parseFloat(newSkor) || 0;
+        });
+        updateDisplay();
+    }
+
+    function deleteRecord(id) {
+        if (confirm("Adakah anda pasti mahu memadam rekod guru ini?")) {
+            masterArkib = masterArkib.filter(m => m.id !== id);
+            updateDisplay();
+        }
+    }
+
+    function drawGraf() {
+        const type = document.getElementById('grafType').value;
+        const chart = document.getElementById('chart-display');
+        const legend = document.getElementById('chart-legend');
+        chart.innerHTML = "";
+        legend.innerHTML = "";
+        
+        chart.style.alignItems = (type === 'pie') ? 'center' : 'flex-end';
+        chart.style.borderLeft = (type === 'pie') ? 'none' : '3px solid #333';
+        chart.style.borderBottom = (type === 'pie') ? 'none' : '3px solid #333';
+
+        const colors = ['#3498db', '#e74c3c', '#2ecc71', '#f1c40f', '#9b59b6', '#e67e22', '#1abc9c', '#34495e'];
+
+        if(type === 'bar') {
+            aspekData.forEach((a, i) => {
+                let h = (a.final / a.wajaran) * 100 || 0;
+                chart.innerHTML += `<div class="bar" style="height:${h}%; background:${colors[i]}">
+                    <div class="bar-val">${(a.final||0).toFixed(1)}%</div>
+                    <div class="bar-label">${a.nama}</div>
+                </div>`;
+            });
+        } else if(type === 'line') {
+            let points = "";
+            let width = chart.clientWidth - 100;
+            let height = chart.clientHeight - 100;
+            aspekData.forEach((a, i) => {
+                let x = (i * (width / (aspekData.length - 1))) + 50;
+                let y = (height + 50) - ((a.final / a.wajaran) * height) || (height + 50);
+                points += `${x},${y} `;
+                chart.innerHTML += `<div style="position:absolute; left:${x-5}px; top:${y-25}px; font-size:10px; font-weight:bold;">${a.final.toFixed(1)}%</div>`;
+                chart.innerHTML += `<div style="position:absolute; left:${x-10}px; bottom:-45px; font-size:10px; font-weight:bold; transform:rotate(15deg); white-space:nowrap;">${a.nama}</div>`;
+            });
+            chart.innerHTML += `<svg class="line-svg"><polyline points="${points}" fill="none" stroke="#3498db" stroke-width="4"/></svg>`;
+        } else if(type === 'pie') {
+            let cumulativePercent = 0;
+            let totalVal = aspekData.reduce((s, a) => s + (a.final || 0), 0);
+            let gradientParts = aspekData.map((a, i) => {
+                let slice = (a.final / (totalVal || 1)) * 360;
+                let part = `${colors[i]} ${cumulativePercent}deg ${cumulativePercent + slice}deg`;
+                cumulativePercent += slice;
+                legend.innerHTML += `<div class="legend-item"><div class="legend-color" style="background:${colors[i]}"></div>${a.nama} (${a.final.toFixed(1)}%)</div>`;
+                return part;
+            });
+            chart.innerHTML = `<div style="width:300px; height:300px; border-radius:50%; background:conic-gradient(${gradientParts.join(',')}); box-shadow: 0 0 10px rgba(0,0,0,0.1);"></div>`;
+        }
+    }
+
+    function openTab(t, b) {
+        document.querySelectorAll('.tab-container').forEach(c => c.style.display='none');
+        document.getElementById(t).style.display='block';
+        document.querySelectorAll('.tab-buttons button').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+        if(t === 'graf') {
+            setTimeout(drawGraf, 100);
+        }
+    }
+    
+    function logout() { location.reload(); }
+</script>
+</body>
+</html>
