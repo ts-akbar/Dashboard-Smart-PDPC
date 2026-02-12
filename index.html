@@ -34,8 +34,9 @@
         .legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: bold; }
         .legend-color { width: 15px; height: 15px; border-radius: 3px; }
 
-        .btn-edit { background: #f1c40f; color: black; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; margin-right: 5px; }
-        .btn-delete { background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; }
+        .btn-edit { background: #f1c40f; color: black; border: none; padding: 8px 12px; border-radius: 3px; cursor: pointer; margin-right: 5px; font-weight: bold; }
+        .btn-delete { background: #e74c3c; color: white; border: none; padding: 8px 12px; border-radius: 3px; cursor: pointer; font-weight: bold; }
+        .btn-name { background: white; border: 1px solid #ccc; padding: 8px 15px; border-radius: 5px; cursor: pointer; flex-grow: 1; text-align: left; font-weight: bold; }
 
         footer { text-align: center; padding: 20px; background: var(--primary); color: white; font-size: 14px; margin-top: auto; }
     </style>
@@ -66,7 +67,7 @@
         <div class="total-box">JUMLAH KESELURUHAN ASPEK: <span id="total-overall">0</span>/100%</div>
         <div class="arkib-section" style="margin-top:20px;">
             <h3>📂 SENARAI GURU</h3>
-            <div id="guru-names-list" style="display: flex; flex-wrap: wrap; gap: 10px;"></div>
+            <div id="guru-names-list" style="display: flex; flex-direction: column; gap: 10px;"></div>
             <div id="guru-detail-area" style="margin-top: 20px; display: none; padding: 15px; background: #fff; border: 1px solid #ddd; border-radius: 5px;">
                 <button onclick="this.parentElement.style.display='none'" style="float:right">Tutup</button>
                 <div id="detail-content"></div>
@@ -166,13 +167,28 @@
 
     function updateDisplay() {
         const nameList = document.getElementById('guru-names-list');
-        const uniqueEntries = masterArkib.filter((v,i,a)=>a.findIndex(t=>(t.id === v.id))===i);
+        // Filter unique entries based on ID
+        const uniqueEntries = [];
+        const seenIds = new Set();
+        
+        for (const item of masterArkib) {
+            if (!seenIds.has(item.id)) {
+                uniqueEntries.push(item);
+                seenIds.add(item.id);
+            }
+        }
+
         nameList.innerHTML = "";
+        
+        // PENTING: Gunakan tanda petik tunggal '' untuk ID dalam onclick supaya GitHub/Browser baca sebagai string
         uniqueEntries.forEach(entry => {
-            nameList.innerHTML += `<div style="display:flex; align-items:center; background:white; border:1px solid #ccc; border-radius:5px; padding:5px;">
-                <span onclick="showDetail(${entry.id})" style="padding:5px 10px; cursor:pointer; flex-grow:1;">${entry.nama}</span>
-                <button class="btn-edit" onclick="editRecord(${entry.id})">Edit</button>
-                <button class="btn-delete" onclick="deleteRecord(${entry.id})">Padam</button>
+            nameList.innerHTML += `
+            <div style="display:flex; align-items:center; background:white; border:1px solid #ccc; border-radius:5px; padding:10px;">
+                <button class="btn-name" onclick="showDetail('${entry.id}')">${entry.nama}</button>
+                <div style="margin-left:10px;">
+                    <button class="btn-edit" onclick="editRecord('${entry.id}')">Edit</button>
+                    <button class="btn-delete" onclick="deleteRecord('${entry.id}')">Padam</button>
+                </div>
             </div>`;
         });
 
@@ -201,18 +217,26 @@
     }
 
     function showDetail(id) {
+        // Tukar semula string ID ke Number untuk perbandingan
+        const numId = Number(id);
         const area = document.getElementById('guru-detail-area');
         area.style.display = 'block';
-        const records = masterArkib.filter(m => m.id === id);
-        let h = `<h4>Rekod: ${records[0].nama}</h4><ul>`;
-        records.forEach(m => {
-            h += `<li>ASPEK ${m.aspekId}: ${m.skor} / ${m.wMax}</li>`;
-        });
-        document.getElementById('detail-content').innerHTML = h + "</ul>";
+        const records = masterArkib.filter(m => m.id === numId);
+        
+        if(records.length > 0) {
+            let h = `<h4>Rekod: ${records[0].nama}</h4><ul>`;
+            records.forEach(m => {
+                h += `<li>ASPEK ${m.aspekId}: ${m.skor} / ${m.wMax}</li>`;
+            });
+            document.getElementById('detail-content').innerHTML = h + "</ul>";
+        }
     }
 
     function editRecord(id) {
-        const records = masterArkib.filter(m => m.id === id);
+        const numId = Number(id);
+        const records = masterArkib.filter(m => m.id === numId);
+        if(records.length === 0) return;
+
         const newName = prompt("Kemaskini Nama Guru:", records[0].nama);
         if (newName === null) return;
 
@@ -225,8 +249,9 @@
     }
 
     function deleteRecord(id) {
+        const numId = Number(id);
         if (confirm("Adakah anda pasti mahu memadam rekod guru ini?")) {
-            masterArkib = masterArkib.filter(m => m.id !== id);
+            masterArkib = masterArkib.filter(m => m.id !== numId);
             updateDisplay();
         }
     }
