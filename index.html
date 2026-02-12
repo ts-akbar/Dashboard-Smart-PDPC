@@ -113,7 +113,9 @@
 </footer>
 
 <script>
-    let masterArkib = [];
+    // INIT DATA DARI LOCALSTORAGE
+    let masterArkib = JSON.parse(localStorage.getItem('smartPDPC_DB')) || [];
+
     const aspekData = [
         { id: "4.1", nama: "PERANCANG", wajaran: 10 },
         { id: "4.2.1", nama: "PENGAWAL (PROSES)", wajaran: 10 },
@@ -132,6 +134,7 @@
             document.getElementById('main-app').style.display = 'block';
             document.getElementById('logout-btn').style.display = 'block';
             initAspek();
+            updateDisplay(); // Load data bila login berjaya
         } else alert("Kataluan Salah!");
     }
 
@@ -150,6 +153,11 @@
         });
     }
 
+    // FUNGSI SIMPAN KE LOCALSTORAGE
+    function saveToStorage() {
+        localStorage.setItem('smartPDPC_DB', JSON.stringify(masterArkib));
+    }
+
     function saveData() {
         const name = document.getElementById('guru-4.1').value.trim();
         if(!name) return alert("Sila masukkan nama guru!");
@@ -162,12 +170,13 @@
         });
         document.getElementById('guru-4.1').value = "";
         aspekData.slice(1).forEach(a => document.getElementById(`guru-${a.id}`).value = "");
+        
+        saveToStorage(); // SIMPAN KEKAL
         updateDisplay();
     }
 
     function updateDisplay() {
         const nameList = document.getElementById('guru-names-list');
-        // Filter unique entries based on ID
         const uniqueEntries = [];
         const seenIds = new Set();
         
@@ -180,7 +189,6 @@
 
         nameList.innerHTML = "";
         
-        // PENTING: Gunakan tanda petik tunggal '' untuk ID dalam onclick supaya GitHub/Browser baca sebagai string
         uniqueEntries.forEach(entry => {
             nameList.innerHTML += `
             <div style="display:flex; align-items:center; background:white; border:1px solid #ccc; border-radius:5px; padding:10px;">
@@ -217,7 +225,6 @@
     }
 
     function showDetail(id) {
-        // Tukar semula string ID ke Number untuk perbandingan
         const numId = Number(id);
         const area = document.getElementById('guru-detail-area');
         area.style.display = 'block';
@@ -245,6 +252,8 @@
             const newSkor = prompt(`Kemaskini Skor untuk ASPEK ${r.aspekId} (Maks: ${r.wMax}):`, r.skor);
             if (newSkor !== null) r.skor = parseFloat(newSkor) || 0;
         });
+        
+        saveToStorage(); // SIMPAN PERUBAHAN
         updateDisplay();
     }
 
@@ -252,6 +261,7 @@
         const numId = Number(id);
         if (confirm("Adakah anda pasti mahu memadam rekod guru ini?")) {
             masterArkib = masterArkib.filter(m => m.id !== numId);
+            saveToStorage(); // SIMPAN PERUBAHAN SELEPAS PADAM
             updateDisplay();
         }
     }
@@ -317,3 +327,4 @@
 </script>
 </body>
 </html>
+
